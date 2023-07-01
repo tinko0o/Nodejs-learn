@@ -1,57 +1,65 @@
-const User = require("../models/user");
+// const User = require("../models/mongo/user");
+const User = require("../models/mysql/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const {env} = require("../config/env")
+const {env} = require("../config/env");
+const { asyncMiddleware } = require("../middlewares/asyncMiddleware");
+const { ErrorResponse } = require("../response/ErrorResponse");
 
-const register = async (req, res) => {
+
+const register = asyncMiddleware( async (req, res,next) => {
   const { username, email, password } = req.body;
-
-  const isUserExisted = await User.findOne({ email });
+  //Mongo
+  // const isUserExisted = await User.findOne({ email });
+  // MySql
+  const isUserExisted = await User.findOne({where: {email} });
 
   if (isUserExisted) {
-    return res.status(400).json({
-      success: false,
-      message: "Email is already existed!",
-    });
+    throw new ErrorResponse(409, "Email is already existed!")
   }
   const salt = bcrypt.genSaltSync(12);
   const hashPassword = bcrypt.hashSync(password, salt);
-  const user = new User({
+
+  //Mongo
+  // const user = new User({
+  //   username,
+  //   email,
+  //   password: hashPassword,
+  // });
+  // await user.save();
+
+  // Mysql
+  const newUser = await User.create({
     username,
     email,
     password: hashPassword,
   });
 
-  user.save();
-  return res.status(200).json({
+  return res.status(201).json({
     success: true,
   });
-};
+});
 
-const login = async (req, res) => {
-  try {
+const login = asyncMiddleware( async (req, res,next) => {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
-
+    // Mongo
+    // const user = await User.findOne({ email });
+    // MySql
+    const user = await User.findOne({where: {email} });
+    
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
+      throw new ErrorResponse(401, "Unauthorized")
     }
 
     const isMatch = bcrypt.compareSync(password, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
+      throw new ErrorResponse(401, "Unauthorized")
     }
     //tao jwt
     const token = jwt.sign(
       {
-        userID: user._id,
+        userId: user._id,
         username: user.username,
         email: user.email,
       },
@@ -63,13 +71,7 @@ const login = async (req, res) => {
       success: true,
       data: token,
     });
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: "Bad request!",
-    });
-  }
-};
+});
 
 module.exports = {
   register,

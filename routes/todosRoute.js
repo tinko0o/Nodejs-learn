@@ -7,7 +7,14 @@ const jwtAuth = require("../middlewares/jwtAuth");
 
 router.post("/", jwtAuth, validator(todoSchema.todoSchema), Todo.addTodo);
 
-router.get("/", Todo.getTodo);
+router.get("/",jwtAuth, Todo.getTodo);
+
+router.get(
+  "/:id",
+  jwtAuth,
+  // validator(todoSchema.idSchema, "params"),
+  Todo.getTodoById
+);
 
 router.delete(
   "/:id",
@@ -20,7 +27,7 @@ router.patch(
   "/:id",
   jwtAuth,
   validator(todoSchema.idSchema, "params"),
-  validator(todoSchema.todoSchema),
+  validator(todoSchema.updateTodoSchema),
   Todo.updateTodo
 );
 

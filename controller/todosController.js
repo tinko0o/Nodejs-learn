@@ -1,50 +1,102 @@
-const Todo = require("../models/todo");
+const { asyncMiddleware } = require("../middlewares/asyncMiddleware");
+// const Todo = require("../models/mongo/todo");
+const Todo = require("../models/mysql/Todo");
+const { ErrorResponse } = require("../response/ErrorResponse");
 
-const addTodo = async (req, res) => {
+const addTodo = asyncMiddleware( async (req, res,next) => {
   const { content } = req.body;
-  if (!content) {
-    return res.status(400).json({
-      success: false,
-    });
-  }
-  const newTodo = new Todo({
+  const { email } = req.user
+  // Mongo
+  // const newTodo = new Todo({
+  //   content,
+  //   email,
+  // });
+  // await newTodo.save();
+
+  // MySql
+  await Todo.create({
     content,
+    email,
   });
-  await newTodo.save();
+
   return res.status(201).json({
     success: true,
-    user: req.user,
+    // user: req.user,
   });
-};
+});
 
-const getTodo = async (req, res) => {
-  const todos = await Todo.find();
+const getTodoById = asyncMiddleware( async (req, res,next) => {
+  const { id } = req.params;
+  const { userId } = req.user;
+  // Mongo
+  // const todo = await Todo.findOne({_id:id, userId})
+  // MySql
+  const todo = await Todo.findOne({ where: {id} })
+  if(!todo){
+    throw new ErrorResponse(404, "Not found!")
+  }
+  res.json({
+    success:true,
+    data:todo,
+  })
+});
+
+const getTodo = asyncMiddleware( async (req, res,next) => {
+  const {userId}= req.user;
+  // Mongo
+  // const todos = await Todo.find().populate("userEmail","-password");
+  // MySql
+  const todos = await Todo.findAll();
+
   return res.status(201).json({
     success: true,
     data: todos,
   });
-};
+});
 
-const deleteTodo = async (req, res) => {
-  await Todo.findByIdAndDelete(req.params.id);
+const deleteTodo = asyncMiddleware( async (req, res,next) => {
+  const { id } = req.params
+  // Mongo
+  // await Todo.findByIdAndDelete(req.params.id);
+  // MySql
+  await Todo.destroy({
+    where:{
+      id,
+    },
+  });
+
   return res.status(200).json({
     success: true,
   });
-};
+});
 
-const updateTodo = async (req, res) => {
+const updateTodo = asyncMiddleware( async (req, res,next) => {
   const { id } = req.params;
   const { content } = req.body;
+  // Mongo
+  // await Todo.findByIdAndUpdate(id, { content });
+  // MySql
+  const result = await Todo.update(
+    {
+      content,
+    },
+    {
+      where:{
+        id,
+      },
+    }
+  );
 
-  await Todo.findByIdAndUpdate(id, { content });
-  return res.status(200).json({
+  return res.json({
     success: true,
+    data:result
   });
-};
+});
 
 module.exports = {
   addTodo,
   getTodo,
   deleteTodo,
   updateTodo,
+  getTodoById,
 };

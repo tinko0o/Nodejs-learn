@@ -10,12 +10,12 @@ const idSchema = Joi.object({
   id: Joi.objectId(),
 });
 
-const updateSchema = Joi.object({
+const updateTodoSchema = Joi.object({
   content: contentSchema,
 });
 
 module.exports = {
   todoSchema,
   idSchema,
-  updateSchema,
+  updateTodoSchema,
 };
